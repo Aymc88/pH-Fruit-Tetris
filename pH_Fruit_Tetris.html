@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>pH Fruit Tetris</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d0d1a;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 12px 8px;
+  user-select: none;
+}
+
+h1 {
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: #00e5ff;
+  text-shadow: 0 0 18px #00e5ff88;
+  margin-bottom: 12px;
+}
+
+/* ── pH Reference Bar ───────────────────────────── */
+#phBarWrap {
+  width: 680px;
+  max-width: 98vw;
+  background: #12122a;
+  border: 1px solid #2a2a50;
+  border-radius: 10px;
+  padding: 10px 14px 8px;
+  margin-bottom: 10px;
+}
+#phBarTitle {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+#phScaleBar {
+  position: relative;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(to right,
+    #cc0000 0%,  #ff2200 8%,  #ff5500 16%,
+    #ff8800 24%, #ffaa00 32%, #ffcc00 40%,
+    #ccdd00 50%, #88cc00 58%, #44bb00 66%,
+    #00aa88 74%, #0077cc 82%, #0044ff 90%, #6600cc 100%
+  );
+  margin-bottom: 4px;
+}
+/* pH number labels */
+#phNumbers {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+  font-size: 10px;
+  color: #666;
+}
+/* Fruit markers on the pH bar */
+.ph-marker {
+  position: absolute;
+  top: -8px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 18px;
+  cursor: default;
+}
+.ph-marker span {
+  font-size: 9px;
+  color: #ccc;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+.ph-marker::after {
+  content: '';
+  width: 2px;
+  height: 36px;
+  background: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+
+/* ── Fruit Progress Cards ───────────────────────── */
+#fruitsRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.fruit-card {
+  background: #12122a;
+  border: 2px solid #2a2a50;
+  border-radius: 10px;
+  padding: 8px 14px;
+  text-align: center;
+  width: 150px;
+  transition: border-color .3s, box-shadow .3s, background .3s;
+  position: relative;
+  overflow: hidden;
+}
+.fruit-card .fc-emoji { font-size: 28px; }
+.fruit-card .fc-name  { font-size: 13px; font-weight: bold; margin: 2px 0; }
+.fruit-card .fc-ph    { font-size: 11px; color: #aaa; }
+.fruit-card .fc-hint  { font-size: 10px; color: #666; margin-top: 3px; line-height: 1.3; }
+.fruit-card .fc-check { font-size: 22px; margin-top: 4px; }
+.fruit-card.achieved {
+  border-color: #00ff88;
+  background: #0a2a1a;
+  box-shadow: 0 0 20px #00ff8866;
+}
+.fruit-card.achieved .fc-hint { color: #00ff88; }
+
+/* ── Game Layout ────────────────────────────────── */
+#gameLayout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+#gameCanvas {
+  border: 2px solid #2a2a50;
+  border-radius: 4px;
+  display: block;
+  touch-action: none;
+}
+
+/* ── Side Panel ─────────────────────────────────── */
+#sidePanel {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel-box {
+  background: #12122a;
+  border: 1px solid #2a2a50;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.panel-box h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  margin-bottom: 8px;
+}
+#nextCanvas {
+  display: block;
+  border-radius: 4px;
+  background: #08080f;
+}
+.stat-label { font-size: 11px; color: #666; }
+.stat-value { font-size: 22px; font-weight: bold; color: #00e5ff; }
+
+/* pH Meter */
+#phMeterLabel { font-size: 11px; color: #666; margin-bottom: 4px; }
+#phMeterBar {
+  height: 18px;
+  border-radius: 4px;
+  background: #08080f;
+  overflow: hidden;
+  margin-bottom: 4px;
+  position: relative;
+}
+#phMeterFill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  transition: width .2s, background .2s;
+}
+#phMeterValue {
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+  color: #eee;
+}
+#phMeterFruitHint {
+  font-size: 10px;
+  color: #aaa;
+  text-align: center;
+  min-height: 14px;
+  margin-top: 2px;
+}
+
+/* Buttons */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #00e5ff;
+  color: #000;
+  transition: background .2s, transform .1s;
+}
+.btn:hover { background: #00c8e0; transform: scale(1.02); }
+.btn:active { transform: scale(0.98); }
+.btn.danger { background: #ff4455; color: #fff; }
+
+/* Controls hint */
+#controlsHint {
+  font-size: 10px;
+  color: #555;
+  line-height: 1.7;
+}
+
+/* ── Legend ─────────────────────────────────────── */
+#legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  max-width: 680px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #aaa;
+}
+.legend-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+}
+
+/* Flash overlay */
+#flashOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  animation: flashAnim .6s ease-out;
+}
+@keyframes flashAnim {
+  0%   { opacity: .8; }
+  100% { opacity: 0; }
+}
+
+/* Win / Game-over modal */
+#modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#modal.show { display: flex; }
+#modalBox {
+  background: #12122a;
+  border: 2px solid #00e5ff;
+  border-radius: 14px;
+  padding: 30px 40px;
+  text-align: center;
+  max-width: 360px;
+}
+#modalTitle { font-size: 32px; margin-bottom: 10px; }
+#modalMsg   { font-size: 15px; color: #aaa; margin-bottom: 6px; }
+#modalScore { font-size: 24px; color: #00e5ff; font-weight: bold; margin-bottom: 20px; }
+
+/* Mobile adjustments - iPhone Full Screen */
+@media (max-width: 600px) {
+  html, body { 
+    padding: 0; margin: 0; width: 100%; height: 100vh; height: 100dvh; 
+    overflow: hidden; background: #000; position: relative; touch-action: none;
+  }
+  h1, #phBarWrap, #legend { display: none !important; }
+  
+  #gameLayout { 
+    display: block; position: absolute; top: 0; left: 0; 
+    margin: 0; padding: 0; width: 100vw; height: 100dvh; 
+  }
+  #gameCanvas { 
+    width: 100vw; height: 100dvh; border: none; border-radius: 0; display: block; 
+    object-fit: contain; margin: 0 auto;
+  }
+  
+  /* Overlay Fruits at Top Left */
+  #fruitsRow {
+    position: fixed; top: 15px; left: 10px; z-index: 1000;
+    display: flex !important; flex-direction: column; gap: 4px; pointer-events: none;
+    width: auto; margin: 0; justify-content: flex-start;
+  }
+  .fruit-card {
+    width: auto; padding: 4px 6px; display: flex; align-items: center; gap: 6px;
+    background: rgba(18, 18, 42, 0.7); border: 1px solid #2a2a50; border-radius: 8px; text-align: left;
+  }
+  .fruit-card .fc-emoji { font-size: 18px; margin: 0; }
+  .fruit-card .fc-name { display: none; }
+  .fruit-card .fc-ph { font-size: 10px; color: #fff; margin: 0; }
+  .fruit-card .fc-hint { display: none; }
+  .fruit-card .fc-check { font-size: 14px; margin: 0; }
+  
+  /* Overlay Score and pH Meter at Top Right */
+  #sidePanel { 
+    position: absolute; top: 15px; right: 10px; width: 100px; z-index: 1000; 
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+    pointer-events: none;
+  }
+  .panel-box { display: none !important; }
+  
+  .panel-box:nth-child(2) { 
+    display: block !important; background: transparent; border: none; padding: 0; text-align: right; 
+  }
+  .stat-label, #linesVal { display: none !important; }
+  #scoreVal { font-size: 26px; text-shadow: 0 2px 10px #000; color: #fff; line-height: 1; margin-bottom: 4px; }
+  
+  .panel-box:nth-child(3) { 
+    display: block !important; background: rgba(18, 18, 42, 0.7); border: 1px solid #2a2a50; padding: 6px; text-align: center; border-radius: 8px; width: 100%;
+  }
+  #phMeterLabel { font-size: 9px; margin-bottom: 4px; color: #ccc; }
+  #phMeterValue { font-size: 13px; margin-top: 2px; }
+  #phMeterFruitHint { display: none; }
+  
+  #startBtn { 
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    z-index: 1000; width: 60vw; max-width: 200px; padding: 20px; font-size: 24px; box-shadow: 0 0 20px #00e5ff; border-radius: 12px; pointer-events: auto;
+  }
+  body.playing #startBtn { display: none !important; }
+  #pauseBtn { display: none !important; }
+}
+
+#mobileControls { display: none; }
+@media (max-width: 600px) {
+  #mobileControls {
+    display: grid;
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
+    margin: 0; padding: 0; 
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 50% 50%;
+    gap: 0; z-index: 900;
+  }
+  .m-btn {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 0;
+    color: rgba(255,255,255,0.15);
+    font-size: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none; touch-action: none;
+  }
+  .m-btn:active { background: rgba(255,255,255,0.15); }
+  
+  #btnRotate { grid-column: 1 / 4; grid-row: 1 / 2; font-size: 60px; align-items: flex-end; padding-bottom: 20px; }
+  #btnLeft   { grid-column: 1; grid-row: 2 / 3; }
+  #btnDown   { grid-column: 2; grid-row: 2 / 3; }
+  #btnRight  { grid-column: 3; grid-row: 2 / 3; }
+  #btnDrop   { display: none; }
+}
+</style>
+</head>
+<body>
+
+<h1>⚗️ pH FRUIT TETRIS</h1>
+
+<!-- pH Reference Bar -->
+<div id="phBarWrap">
+  <div id="phBarTitle">pH Scale Reference — Fruit Acid Targets</div>
+  <div id="phScaleBar">
+    <!-- markers injected by JS -->
+  </div>
+  <div id="phNumbers"></div>
+</div>
+
+<!-- Fruit Progress -->
+<div id="fruitsRow"></div>
+
+<!-- Game -->
+<div id="gameLayout">
+  <canvas id="gameCanvas" width="300" height="600"></canvas>
+
+  <div id="sidePanel">
+
+    <div class="panel-box">
+      <h3>Next Piece</h3>
+      <canvas id="nextCanvas" width="136" height="100"></canvas>
+    </div>
+
+    <div class="panel-box">
+      <div class="stat-label">SCORE</div>
+      <div class="stat-value" id="scoreVal">0</div>
+      <div class="stat-label" style="margin-top:8px">LINES</div>
+      <div class="stat-value" id="linesVal">0</div>
+    </div>
+
+    <div class="panel-box">
+      <div id="phMeterLabel">Row pH Meter</div>
+      <div id="phMeterBar"><div id="phMeterFill"></div></div>
+      <div id="phMeterValue">—</div>
+      <div id="phMeterFruitHint"></div>
+    </div>
+
+    <button class="btn" id="startBtn" onclick="startGame()">▶ START</button>
+    <button class="btn danger" id="pauseBtn" onclick="togglePause()" style="display:none">⏸ PAUSE</button>
+
+    <div class="panel-box">
+      <div id="controlsHint">
+        ← → &nbsp; Move<br>
+        ↑ / Z &nbsp; Rotate<br>
+        ↓ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Soft drop<br>
+        Space &nbsp; Hard drop<br>
+        P &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Pause
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Controls -->
+<div id="mobileControls">
+  <div class="m-btn" id="btnRotate">▲</div>
+  <div class="m-btn" id="btnLeft">◀</div>
+  <div class="m-btn" id="btnDown">▼</div>
+  <div class="m-btn" id="btnRight">▶</div>
+  <div class="m-btn" id="btnDrop">DROP</div>
+</div>
+
+<!-- pH Block Legend -->
+<div id="legend"></div>
+
+<!-- Flash overlay -->
+<div id="flashOverlay"></div>
+
+<!-- Modal -->
+<div id="modal">
+  <div id="modalBox">
+    <div id="modalTitle"></div>
+    <div id="modalMsg"></div>
+    <div id="modalScore"></div>
+    <button class="btn" onclick="hideModal(); startGame()">Play Again</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════
+const W = 10, H = 20, BS = 30; // board width, height, block size
+
+// pH block types – 6 types covering pH 2.5 – 5.5
+const PH_TYPES = [
+  { ph: 2.5, color: '#cc0022', dark: '#880016', text: '#fff', label: '2.5' },
+  { ph: 3.0, color: '#ff3300', dark: '#bb2200', text: '#fff', label: '3.0' },
+  { ph: 3.5, color: '#ff6600', dark: '#cc4400', text: '#fff', label: '3.5' },
+  { ph: 4.0, color: '#ff9900', dark: '#cc7700', text: '#000', label: '4.0' },
+  { ph: 4.5, color: '#ffcc00', dark: '#ccaa00', text: '#000', label: '4.5' },
+  { ph: 5.5, color: '#88cc00', dark: '#559900', text: '#000', label: '5.5' },
+];
+
+// Fruit targets with pH ranges
+const FRUITS = [
+  { name:'Cherry',     emoji:'🍒', ph:3.0, min:2.4, max:3.25, hint:'pH 2.5–3.0 blocks', color:'#cc0022', score:350 },
+  { name:'Apple',      emoji:'🍎', ph:3.5, min:3.25,max:3.75, hint:'pH 3.5 blocks',      color:'#ff3300', score:350 },
+  { name:'Orange',     emoji:'🍊', ph:4.0, min:3.75,max:4.75, hint:'pH 4.0–4.5 blocks', color:'#ff9900', score:400 },
+  { name:'Watermelon', emoji:'🍉', ph:5.5, min:4.75,max:6.5,  hint:'pH 5.5 blocks',      color:'#88cc00', score:550 },
+];
+
+// Tetromino shapes  (each is array of rows)
+const SHAPES = [
+  [[1,1,1,1]],                       // I
+  [[1,1],[1,1]],                      // O
+  [[0,1,0],[1,1,1]],                  // T
+  [[1,1,0],[0,1,1]],                  // S
+  [[0,1,1],[1,1,0]],                  // Z
+  [[1,0,0],[1,1,1]],                  // L
+  [[0,0,1],[1,1,1]],                  // J
+];
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+let board, cur, nxt, score, lines, fruitsAchieved;
+let running = false, paused = false;
+let dropTimer, dropInterval = 800;
+let particles = [];
+
+const canvas  = document.getElementById('gameCanvas');
+const ctx     = canvas.getContext('2d');
+const nxtCvs  = document.getElementById('nextCanvas');
+const nxtCtx  = nxtCvs.getContext('2d');
+
+// ═══════════════════════════════════════════════════
+//  BUILD UI (pH bar + fruit cards + legend)
+// ═══════════════════════════════════════════════════
+(function buildUI() {
+  // --- pH Scale bar markers ---
+  const bar = document.getElementById('phScaleBar');
+  const BAR_MIN = 1, BAR_MAX = 14;
+  function pct(ph) { return ((ph - BAR_MIN) / (BAR_MAX - BAR_MIN) * 100).toFixed(2) + '%'; }
+
+  FRUITS.forEach(f => {
+    const m = document.createElement('div');
+    m.className = 'ph-marker';
+    m.style.left = pct(f.ph);
+    m.innerHTML = `${f.emoji}<span>${f.name}<br>pH ${f.ph}</span>`;
+    bar.appendChild(m);
+  });
+
+  // --- pH numbers row ---
+  const nums = document.getElementById('phNumbers');
+  for (let i = 1; i <= 14; i++) {
+    const s = document.createElement('span');
+    s.textContent = i;
+    nums.appendChild(s);
+  }
+
+  // --- Fruit cards ---
+  buildFruitCards();
+
+  // --- Legend ---
+  const leg = document.getElementById('legend');
+  PH_TYPES.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'legend-item';
+    d.innerHTML = `<div class="legend-swatch" style="background:${p.color};color:${p.text}">${p.label}</div> pH ${p.label}`;
+    leg.appendChild(d);
+  });
+})();
+
+function buildFruitCards() {
+  const row = document.getElementById('fruitsRow');
+  row.innerHTML = '';
+  FRUITS.forEach((f, i) => {
+    const c = document.createElement('div');
+    c.className = 'fruit-card' + (fruitsAchieved && fruitsAchieved[i] ? ' achieved' : '');
+    c.id = 'fc_' + i;
+    c.innerHTML = `
+      <div class="fc-emoji">${f.emoji}</div>
+      <div class="fc-name">${f.name}</div>
+      <div class="fc-ph">Target pH ${f.ph}</div>
+      <div class="fc-hint">${f.hint}</div>
+      <div class="fc-check">${fruitsAchieved && fruitsAchieved[i] ? '✅' : '⬜'}</div>
+    `;
+    row.appendChild(c);
+  });
+}
+
+function updateFruitCard(i) {
+  const c = document.getElementById('fc_' + i);
+  if (!c) return;
+  const f = FRUITS[i];
+  c.className = 'fruit-card' + (fruitsAchieved[i] ? ' achieved' : '');
+  c.querySelector('.fc-hint').textContent  = fruitsAchieved[i] ? 'Collected! +' + f.score + ' pts' : f.hint;
+  c.querySelector('.fc-check').textContent = fruitsAchieved[i] ? '✅' : '⬜';
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME INIT
+// ═══════════════════════════════════════════════════
+function startGame() {
+  document.body.classList.add('playing');
+  board = Array.from({length:H}, () => Array(W).fill(null));
+  score = 0; lines = 0;
+  fruitsAchieved = [false, false, false, false];
+  particles = [];
+  running = true; paused = false;
+
+  document.getElementById('scoreVal').textContent = 0;
+  document.getElementById('linesVal').textContent = 0;
+  document.getElementById('startBtn').textContent  = '↺ RESTART';
+  document.getElementById('pauseBtn').style.display = 'block';
+  hideModal();
+  buildFruitCards();
+
+  nxt = makePiece();
+  spawnPiece();
+  resetDropTimer();
+  requestAnimationFrame(gameLoop);
+}
+
+function makePiece() {
+  const shape  = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  const phType = PH_TYPES[Math.floor(Math.random() * PH_TYPES.length)];
+  return { shape, phType,
+    x: Math.floor(W/2) - Math.floor(shape[0].length/2),
+    y: -1 };
+}
+
+function spawnPiece() {
+  cur = nxt;
+  cur.x = Math.floor(W/2) - Math.floor(cur.shape[0].length/2);
+  cur.y = 0;
+  nxt = makePiece();
+  drawNext();
+  if (collides(cur, 0, 0)) { endGame(false); }
+}
+
+// ═══════════════════════════════════════════════════
+//  COLLISION & MOVEMENT
+// ═══════════════════════════════════════════════════
+function collides(piece, dx, dy, shape) {
+  shape = shape || piece.shape;
+  for (let r = 0; r < shape.length; r++)
+    for (let c = 0; c < shape[r].length; c++)
+      if (shape[r][c]) {
+        const nx = piece.x + c + dx, ny = piece.y + r + dy;
+        if (nx < 0 || nx >= W || ny >= H) return true;
+        if (ny >= 0 && board[ny][nx]) return true;
+      }
+  return false;
+}
+
+function rotate(shape) {
+  return shape[0].map((_, c) => shape.map(row => row[c]).reverse());
+}
+
+function tryRotate() {
+  const r = rotate(cur.shape);
+  if (!collides(cur, 0, 0, r)) { cur.shape = r; return; }
+  // wall kick
+  for (const kick of [-1, 1, -2, 2])
+    if (!collides(cur, kick, 0, r)) { cur.x += kick; cur.shape = r; return; }
+}
+
+function moveLeft()  { if (!collides(cur,-1,0)) cur.x--; }
+function moveRight() { if (!collides(cur, 1,0)) cur.x++; }
+function softDrop()  { if (!collides(cur, 0,1)) { cur.y++; score++; } else lock(); }
+
+function hardDrop() {
+  let dropped = 0;
+  while (!collides(cur, 0, 1)) { cur.y++; dropped++; }
+  score += dropped * 2;
+  lock();
+}
+
+// ═══════════════════════════════════════════════════
+//  LOCKING & LINE CLEAR
+// ═══════════════════════════════════════════════════
+function lock() {
+  cur.shape.forEach((row, r) =>
+    row.forEach((v, c) => {
+      if (v) {
+        const ny = cur.y + r;
+        if (ny < 0) { endGame(false); return; }
+        board[ny][cur.x + c] = cur.phType;
+      }
+    })
+  );
+  clearLines();
+  spawnPiece();
+  resetDropTimer();
+}
+
+function clearLines() {
+  let cleared = 0;
+  for (let r = H - 1; r >= 0; r--) {
+    if (board[r].every(c => c !== null)) {
+      // Calculate row average pH
+      const avgPH = board[r].reduce((s, c) => s + c.ph, 0) / W;
+      checkFruitMatch(avgPH, r);
+
+      // Particle burst at cleared row
+      spawnRowParticles(r, board[r]);
+
+      board.splice(r, 1);
+      board.unshift(Array(W).fill(null));
+      cleared++;
+      r++; // re-check same row index
+    }
+  }
+  if (cleared > 0) {
+    lines += cleared;
+    const pts = [0, 100, 300, 500, 800][Math.min(cleared, 4)];
+    score += pts;
+    document.getElementById('scoreVal').textContent = score;
+    document.getElementById('linesVal').textContent = lines;
+
+    // Speed up every 5 lines
+    dropInterval = Math.max(150, 800 - Math.floor(lines / 5) * 60);
+  }
+}
+
+function checkFruitMatch(avgPH, row) {
+  FRUITS.forEach((f, i) => {
+    if (!fruitsAchieved[i] && avgPH >= f.min && avgPH <= f.max) {
+      fruitsAchieved[i] = true;
+      score += f.score;
+      document.getElementById('scoreVal').textContent = score;
+      updateFruitCard(i);
+      flashScreen(f.color);
+
+      if (fruitsAchieved.every(Boolean)) {
+        setTimeout(() => endGame(true), 400);
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════
+function spawnRowParticles(row, rowData) {
+  const y = row * BS + BS / 2;
+  rowData.forEach((cell, c) => {
+    if (!cell) return;
+    const x = c * BS + BS / 2;
+    for (let i = 0; i < 3; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - .5) * 5,
+        vy: (Math.random() - 1) * 5,
+        life: 1,
+        decay: .04 + Math.random() * .04,
+        color: cell.color,
+        r: 3 + Math.random() * 4,
+      });
+    }
+  });
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += .2;
+    p.life -= p.decay;
+  });
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════════════════
+//  GHOST PIECE
+// ═══════════════════════════════════════════════════
+function ghostY() {
+  let dy = 0;
+  while (!collides(cur, 0, dy + 1)) dy++;
+  return dy;
+}
+
+// ═══════════════════════════════════════════════════
+//  DRAWING
+// ═══════════════════════════════════════════════════
+function drawBlock(cx, bx, by, phType, alpha) {
+  alpha = alpha || 1;
+  cx.globalAlpha = alpha;
+  // Body
+  cx.fillStyle = phType.color;
+  cx.fillRect(bx + 1, by + 1, BS - 2, BS - 2);
+  // Top highlight
+  cx.fillStyle = 'rgba(255,255,255,0.25)';
+  cx.fillRect(bx + 1, by + 1, BS - 2, 6);
+  // Left highlight
+  cx.fillStyle = 'rgba(255,255,255,0.15)';
+  cx.fillRect(bx + 1, by + 1, 5, BS - 2);
+  // Bottom-right shadow
+  cx.fillStyle = phType.dark;
+  cx.fillRect(bx + BS - 4, by + 1, 3, BS - 2);
+  cx.fillRect(bx + 1, by + BS - 4, BS - 2, 3);
+  // pH label
+  cx.fillStyle = phType.text;
+  cx.font = 'bold 9px Arial';
+  cx.textAlign = 'center';
+  cx.textBaseline = 'middle';
+  cx.fillText(phType.label, bx + BS / 2, by + BS / 2);
+  cx.globalAlpha = 1;
+}
+
+function drawBoard() {
+  // Background
+  ctx.fillStyle = '#08080f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid lines
+  ctx.strokeStyle = '#12122a';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= W; x++) {
+    ctx.beginPath(); ctx.moveTo(x*BS, 0); ctx.lineTo(x*BS, H*BS); ctx.stroke();
+  }
+  for (let y = 0; y <= H; y++) {
+    ctx.beginPath(); ctx.moveTo(0, y*BS); ctx.lineTo(W*BS, y*BS); ctx.stroke();
+  }
+
+  // Placed blocks
+  for (let r = 0; r < H; r++)
+    for (let c = 0; c < W; c++)
+      if (board[r][c]) drawBlock(ctx, c*BS, r*BS, board[r][c]);
+
+  if (!cur) return;
+
+  // Ghost piece
+  const gy = cur.y + ghostY();
+  cur.shape.forEach((row, r) =>
+    row.forEach((v, c) => {
+      if (v && gy !== cur.y) {
+        ctx.globalAlpha = .22;
+        ctx.fillStyle = cur.phType.color;
+        ctx.fillRect((cur.x+c)*BS+1, (gy+r)*BS+1, BS-2, BS-2);
+        ctx.globalAlpha = 1;
+      }
+    })
+  );
+
+  // Current piece
+  cur.shape.forEach((row, r) =>
+    row.forEach((v, c) => {
+      if (v) drawBlock(ctx, (cur.x+c)*BS, (cur.y+r)*BS, cur.phType);
+    })
+  );
+
+  // Particles
+  updateParticles();
+  drawParticles();
+
+  // pH meter update
+  updatePhMeter();
+}
+
+function drawNext() {
+  nxtCtx.fillStyle = '#08080f';
+  nxtCtx.fillRect(0, 0, nxtCvs.width, nxtCvs.height);
+  if (!nxt) return;
+  const bsN = 26;
+  const offX = Math.floor((4 - nxt.shape[0].length) / 2);
+  const offY = Math.floor((3 - nxt.shape.length) / 2);
+  nxt.shape.forEach((row, r) =>
+    row.forEach((v, c) => {
+      if (v) {
+        const bx = (offX + c) * bsN + 6;
+        const by = (offY + r) * bsN + 6;
+        nxtCtx.fillStyle = nxt.phType.color;
+        nxtCtx.fillRect(bx+1, by+1, bsN-2, bsN-2);
+        nxtCtx.fillStyle = 'rgba(255,255,255,0.2)';
+        nxtCtx.fillRect(bx+1, by+1, bsN-2, 5);
+        nxtCtx.fillStyle = nxt.phType.text;
+        nxtCtx.font = 'bold 8px Arial';
+        nxtCtx.textAlign = 'center';
+        nxtCtx.textBaseline = 'middle';
+        nxtCtx.fillText(nxt.phType.label, bx + bsN/2, by + bsN/2);
+      }
+    })
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  pH METER (side panel)
+// ═══════════════════════════════════════════════════
+function updatePhMeter() {
+  // Find bottommost non-empty row that isn't yet full
+  let rowCells = null;
+  for (let r = H - 1; r >= 0; r--) {
+    const occupied = board[r].filter(c => c !== null);
+    if (occupied.length > 0) { rowCells = occupied; break; }
+  }
+  // Also include current piece cells in same rows
+  const phFill  = document.getElementById('phMeterFill');
+  const phVal   = document.getElementById('phMeterValue');
+  const phHint  = document.getElementById('phMeterFruitHint');
+
+  if (!rowCells || rowCells.length === 0) {
+    phFill.style.width = '0%';
+    phVal.textContent = '—';
+    phHint.textContent = '';
+    return;
+  }
+
+  const avg = rowCells.reduce((s, c) => s + c.ph, 0) / rowCells.length;
+  // pH 1-7 scale for the bar (most relevant range for acidic fruits)
+  const pct = Math.min(100, Math.max(0, ((avg - 1) / 6) * 100));
+  // Color matches pH scale
+  const hue = Math.round((avg - 1) / 6 * 140); // 0=red(0°) → 140=green
+  phFill.style.width = pct + '%';
+  phFill.style.background = `hsl(${hue}, 90%, 45%)`;
+  phVal.textContent = 'pH ' + avg.toFixed(1);
+
+  // Hint: what fruit does this match?
+  const match = FRUITS.find(f => avg >= f.min && avg <= f.max);
+  phHint.textContent = match
+    ? (fruitsAchieved[FRUITS.indexOf(match)] ? match.emoji + ' Already got it!' : match.emoji + ' → ' + match.name + '!')
+    : 'No fruit match';
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════
+let lastTime = 0;
+function gameLoop(ts) {
+  if (!running) return;
+  if (paused) { requestAnimationFrame(gameLoop); return; }
+  drawBoard();
+  requestAnimationFrame(gameLoop);
+}
+
+function resetDropTimer() {
+  if (dropTimer) clearInterval(dropTimer);
+  if (!running || paused) return;
+  dropTimer = setInterval(() => {
+    if (!running || paused) return;
+    if (!collides(cur, 0, 1)) cur.y++;
+    else lock();
+  }, dropInterval);
+}
+
+// ═══════════════════════════════════════════════════
+//  PAUSE / GAME OVER / WIN
+// ═══════════════════════════════════════════════════
+function togglePause() {
+  if (!running) return;
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+  if (paused) {
+    clearInterval(dropTimer);
+    // Draw pause overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', canvas.width/2, canvas.height/2);
+  } else {
+    resetDropTimer();
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+function endGame(win) {
+  document.body.classList.remove('playing');
+  running = false;
+  clearInterval(dropTimer);
+  document.getElementById('pauseBtn').style.display = 'none';
+
+  const modal = document.getElementById('modal');
+  document.getElementById('modalTitle').textContent = win ? '🎉 YOU WIN!' : '💀 GAME OVER';
+  document.getElementById('modalMsg').textContent   = win
+    ? 'All 4 fruits collected! Amazing chemistry!'
+    : 'The board filled up. Try again!';
+  document.getElementById('modalScore').textContent = 'Score: ' + score;
+  modal.className = 'show';
+
+  if (win) flashScreen('#00ff88');
+}
+
+function hideModal() {
+  document.getElementById('modal').className = '';
+}
+
+function flashScreen(color) {
+  const el = document.getElementById('flashOverlay');
+  el.style.background = color;
+  el.style.display = 'block';
+  el.style.animation = 'none';
+  void el.offsetWidth; // reflow
+  el.style.animation = 'flashAnim .7s ease-out forwards';
+  setTimeout(() => { el.style.display = 'none'; }, 700);
+}
+
+// ═══════════════════════════════════════════════════
+//  KEYBOARD INPUT
+// ═══════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (!running || paused) {
+    if (e.key === 'p' || e.key === 'P') togglePause();
+    return;
+  }
+  switch(e.key) {
+    case 'ArrowLeft':  moveLeft();   break;
+    case 'ArrowRight': moveRight();  break;
+    case 'ArrowDown':  softDrop();   break;
+    case 'ArrowUp': case 'z': case 'Z': tryRotate(); break;
+    case ' ':          hardDrop();   e.preventDefault(); break;
+    case 'p': case 'P': togglePause(); break;
+  }
+});
+
+// Mobile touch controls (swipe + tap)
+let touchX0, touchY0;
+canvas.addEventListener('touchstart', e => {
+  touchX0 = e.touches[0].clientX;
+  touchY0 = e.touches[0].clientY;
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX0;
+  const dy = e.changedTouches[0].clientY - touchY0;
+  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) { tryRotate(); return; }
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 20) moveRight(); else moveLeft();
+  } else {
+    if (dy > 20) hardDrop(); else tryRotate();
+  }
+  e.preventDefault();
+}, { passive: false });
+
+// Virtual Button Controls
+function addBtnEvent(id, action) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  ['touchstart', 'mousedown'].forEach(evt => {
+    btn.addEventListener(evt, e => {
+      e.preventDefault();
+      if (!running) {
+        startGame();
+        return;
+      }
+      if (paused) return;
+      action();
+    }, { passive: false });
+  });
+}
+
+// Explicit touch handler for the start button
+document.getElementById('startBtn').addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  if (!running) startGame();
+});
+
+addBtnEvent('btnRotate', tryRotate);
+addBtnEvent('btnLeft', moveLeft);
+addBtnEvent('btnRight', moveRight);
+addBtnEvent('btnDown', softDrop);
+addBtnEvent('btnDrop', hardDrop);
+
+// ═══════════════════════════════════════════════════
+//  INITIAL RENDER
+// ═══════════════════════════════════════════════════
+fruitsAchieved = [false, false, false, false];
+buildFruitCards();
+
+// Draw empty board
+ctx.fillStyle = '#08080f';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.strokeStyle = '#12122a';
+ctx.lineWidth = 0.5;
+for (let x = 0; x <= W; x++) {
+  ctx.beginPath(); ctx.moveTo(x*BS,0); ctx.lineTo(x*BS,H*BS); ctx.stroke();
+}
+for (let y = 0; y <= H; y++) {
+  ctx.beginPath(); ctx.moveTo(0,y*BS); ctx.lineTo(W*BS,y*BS); ctx.stroke();
+}
+ctx.fillStyle = '#00e5ff44';
+ctx.font = 'bold 18px Arial';
+ctx.textAlign = 'center';
+ctx.fillText('Press ▶ START to play', canvas.width/2, canvas.height/2);
+</script>
+</body>
+</html>
