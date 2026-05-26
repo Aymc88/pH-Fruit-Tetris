@@ -346,6 +346,21 @@ h1 {
   #pauseBtn { display: none !important; }
 }
 
+/* ── Credit ────────────────────────────────────────── */
+#credit {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(0,229,255,0.7), 0 2px 8px rgba(0,0,0,0.8);
+  letter-spacing: 1.5px;
+  z-index: 150;
+  pointer-events: none;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
 #mobileControls { display: none; }
 @media (max-width: 600px) {
   #mobileControls {
@@ -455,6 +470,8 @@ h1 {
     <button class="btn" onclick="hideModal(); startGame()">Play Again</button>
   </div>
 </div>
+
+<div id="credit">Amanda Chen</div>
 
 <script>
 // ═══════════════════════════════════════════════════
